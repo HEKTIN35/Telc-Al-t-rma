@@ -32,20 +32,22 @@ export default function SPSection({
         const trimmed = para.trim();
         if (!trimmed) return null;
         const parts: ReactNode[] = [];
-        const re = /\[\[(\d+)\]\]/g;
+        // Accept either [[N]] placeholders or bare numbers (e.g. 25) used in some datasets
+        const re = /(?:\[\[(\d+)\]\]|\b(\d+)\b)/g;
         let last = 0;
         let m: RegExpExecArray | null;
         let idx = 0;
         while ((m = re.exec(trimmed)) !== null) {
-          if (m.index > last) parts.push(<span key={`${i}-t-${idx++}`}>{trimmed.slice(last, m.index)}</span>);
-          const id = m[1];
-          const item = itemMap.get(id);
-          const mark = marks[id];
+          const matchIndex = m.index;
+          if (matchIndex > last) parts.push(<span key={`${i}-t-${idx++}`}>{trimmed.slice(last, matchIndex)}</span>);
+          const id = m[1] ?? m[2];
+          const item = itemMap.get(String(id));
+          const mark = marks[String(id)];
           parts.push(
             <select
-              key={`s-${id}`}
-              value={answers[id] ?? ""}
-              onChange={(e) => onAnswer(id, e.target.value)}
+              key={`s-${id}-${i}-${matchIndex}`}
+              value={answers[String(id)] ?? ""}
+              onChange={(e) => onAnswer(String(id), e.target.value)}
               className={cn(
                 "ui-text mx-1 my-0.5 inline-block rounded-lg border-2 border-slate-300 bg-white px-2 py-0.5 align-baseline text-[0.68em] font-semibold text-slate-700 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 focus:outline-none dark:border-slate-600 dark:bg-slate-800 dark:text-slate-100",
                 mark === "ok" && "border-emerald-400 bg-emerald-50 text-emerald-800 dark:border-emerald-500/60 dark:bg-emerald-500/10 dark:text-emerald-300",
@@ -58,7 +60,7 @@ export default function SPSection({
               ))}
             </select>,
           );
-          last = re.lastIndex;
+          last = matchIndex + (m[0]?.length ?? 0);
         }
         if (last < trimmed.length) parts.push(<span key={`${i}-last`}>{trimmed.slice(last)}</span>);
         return <p key={`p-${i}`} className="mb-4 last:mb-0">{parts}</p>;
