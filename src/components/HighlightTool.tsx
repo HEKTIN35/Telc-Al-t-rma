@@ -40,7 +40,8 @@ export default function HighlightTool() {
   useEffect(() => {
     if (!active) return;
 
-    const handleSelection = () => {
+    const handleSelection = (event: MouseEvent) => {
+      if ((event.target as HTMLElement | null)?.closest("button, label, input, select")) return;
       const selection = window.getSelection();
       if (!selection || selection.rangeCount === 0 || selection.isCollapsed) return;
 

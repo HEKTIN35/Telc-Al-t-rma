@@ -116,12 +116,14 @@ export default function Header({
             </button>
             <HighlightTool />
             <button
+              type="button"
               onClick={onCheckAll}
               className="ui-text rounded-lg bg-slate-900 px-3 py-1.5 text-xs font-bold text-white transition hover:bg-slate-700 dark:bg-indigo-600 dark:hover:bg-indigo-500"
             >
               Kontrol Et
             </button>
             <button
+              type="button"
               onClick={onResetAll}
               className="ui-text rounded-lg border border-slate-300 px-2.5 py-1.5 text-xs font-bold text-slate-500 transition hover:bg-slate-100 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800"
             >

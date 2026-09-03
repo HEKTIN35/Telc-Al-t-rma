@@ -10,6 +10,7 @@ export default function LV2Section({
   answers,
   marks,
   onAnswer,
+  onCheckOne,
   onCheckAll,
   onReset,
   score,
@@ -19,6 +20,7 @@ export default function LV2Section({
   answers: Record<number, string>;
   marks: Record<number, "ok" | "bad">;
   onAnswer: (id: number, key: string) => void;
+  onCheckOne: (id: number) => void;
   onCheckAll: () => void;
   onReset: () => void;
   score: { correct: number; total: number } | null;
@@ -76,35 +78,47 @@ export default function LV2Section({
           <div
             key={q.id}
             className={cn(
-              "flex flex-col gap-3 rounded-xl border border-slate-200 bg-white p-4 sm:flex-row sm:items-center sm:justify-between dark:border-slate-800 dark:bg-slate-900",
+              cn(
+                "flex flex-wrap items-start gap-3 rounded-xl border border-slate-200 bg-white p-4 dark:border-slate-800 dark:bg-slate-900",
+                splitView && "flex-col",
+              ),
               mark === "ok" && "border-emerald-300 bg-emerald-50/60 dark:border-emerald-500/40 dark:bg-emerald-500/5",
               mark === "bad" && "border-rose-300 bg-rose-50/60 dark:border-rose-500/40 dark:bg-rose-500/5",
             )}
           >
-            <p className="ui-text text-sm font-medium text-slate-800 sm:pr-4 dark:text-slate-100">
+            <p className={cn(
+              "ui-text min-w-0 flex-1 text-sm font-medium text-slate-800 sm:pr-4 dark:text-slate-100",
+              splitView && "w-full flex-none pr-0",
+            )}>
               <span className="mr-2 font-bold text-indigo-600 dark:text-indigo-400">{q.id}.</span>
               {q.text}
             </p>
-            <div className="flex shrink-0 items-center gap-2">
+            <div className={cn(
+              "flex max-w-full shrink-0 flex-wrap items-center justify-end gap-2",
+              splitView && "w-full justify-start",
+            )}>
               <select
                 value={answers[q.id] ?? ""}
                 onChange={(e) => onAnswer(q.id, e.target.value)}
                 className={cn(
-                  "ui-text rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm font-semibold text-slate-700 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 focus:outline-none dark:border-slate-600 dark:bg-slate-800 dark:text-slate-100 dark:focus:ring-indigo-500/30",
+                  "ui-text min-w-[5.5rem] rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm font-semibold text-slate-700 [color-scheme:light] focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 focus:outline-none dark:border-slate-600 dark:bg-slate-800 dark:text-slate-100 dark:[color-scheme:dark] dark:focus:ring-indigo-500/30",
                   mark === "ok" && "border-emerald-400",
                   mark === "bad" && "border-rose-400",
                 )}
               >
-                <option value="">Seç…</option>
-                {KEYS.map((k) => <option key={k} value={k}>{k}</option>)}
+                <option value="" className="bg-white text-slate-800 dark:bg-slate-800 dark:text-slate-100">Seç…</option>
+                {KEYS.map((k) => <option key={k} value={k} className="bg-white text-slate-800 dark:bg-slate-800 dark:text-slate-100">{k}</option>)}
               </select>
               {mark === "ok" && <span className="text-lg font-bold text-emerald-600 dark:text-emerald-400">✓</span>}
               {mark === "bad" && <span className="text-lg font-bold text-rose-600 dark:text-rose-400">✗</span>}
-              {score !== null && (
+              {mark === "bad" && (
                 <span className="ui-text text-xs font-bold text-emerald-700 dark:text-emerald-300">
                   Doğru cevap: {q.solution.toUpperCase()} paragrafı
                 </span>
               )}
+              <button type="button" onClick={() => onCheckOne(q.id)} className="ui-text rounded-lg border border-slate-300 px-2 py-1 text-xs font-semibold text-slate-600 hover:border-violet-400 hover:text-violet-600 dark:border-slate-600 dark:text-slate-300">
+                Kontrol Et
+              </button>
             </div>
           </div>
         );

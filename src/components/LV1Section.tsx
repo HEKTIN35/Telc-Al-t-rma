@@ -107,9 +107,9 @@ export default function LV1Section({
         {filled ? chosenKey!.toUpperCase() : "···"}
         {mark === "ok" && <span className="text-emerald-600 dark:text-emerald-400">✓</span>}
         {mark === "bad" && <span className="text-rose-600 dark:text-rose-400">✗</span>}
-        {score !== null && data.solution[id] && (
+        {mark !== undefined && data.solution[id] && (
           <span className="ui-text text-xs font-bold text-emerald-700 dark:text-emerald-300">
-            Doğru: {data.solution[id].toUpperCase()}
+            Doğru: {String(data.solution[id]).trim().toUpperCase()}
           </span>
         )}
         <button

@@ -8,6 +8,7 @@ export default function SPSection({
   answers,
   marks,
   onAnswer,
+  onCheckOne,
   onCheckAll,
   onReset,
   score,
@@ -17,6 +18,7 @@ export default function SPSection({
   answers: Record<string, string>;
   marks: Record<string, "ok" | "bad">;
   onAnswer: (id: string, value: string) => void;
+  onCheckOne: (id: string) => void;
   onCheckAll: () => void;
   onReset: () => void;
   score: { correct: number; total: number } | null;
@@ -38,7 +40,8 @@ export default function SPSection({
         let m: RegExpExecArray | null;
         let idx = 0;
         while ((m = re.exec(trimmed)) !== null) {
-          const matchIndex = m.index;
+          let matchIndex = m.index;
+          if (matchIndex > last && trimmed[matchIndex - 1] === "(") matchIndex -= 1;
           if (matchIndex > last) parts.push(<span key={`${i}-t-${idx++}`}>{trimmed.slice(last, matchIndex)}</span>);
           const id = m[1] ?? m[2];
           const item = itemMap.get(String(id));
@@ -54,19 +57,31 @@ export default function SPSection({
                 mark === "bad" && "border-rose-400 bg-rose-50 text-rose-800 dark:border-rose-500/60 dark:bg-rose-500/10 dark:text-rose-300",
               )}
               >
-                <option value="">({id})</option>
+                <option value="">{id}</option>
                 {item && (["a", "b", "c", "d"] as const).map((k) => (
-                  <option key={k} value={k}>{k}) {item.options[k]}</option>
+                  <option key={k} value={k}>{k} {item.options[k]}</option>
                 ))}
               </select>
-              {score !== null && item && (
+              {(score !== null || mark === "bad") && item && (
                 <span className="ui-text ml-1 inline-block text-xs font-bold text-emerald-700 dark:text-emerald-300">
-                  Doğru: {item.solution.toUpperCase()}) {item.options[item.solution]}
+                  Doğru: {String(item.solution).toUpperCase()} {item.options?.[String(item.solution).toLowerCase()] ?? ""}
                 </span>
+              )}
+              {item && (
+                <button
+                  type="button"
+                  onClick={() => onCheckOne(String(id))}
+                  aria-label={`${id} numaralı soruyu kontrol et`}
+                  title="Bu soruyu kontrol et"
+                  className="ml-1 inline-flex h-5 w-5 items-center justify-center rounded border border-slate-300 bg-slate-100 text-xs font-bold text-slate-600 hover:border-violet-400 hover:text-violet-600 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-300"
+                >
+                  ✓
+                </button>
               )}
             </span>,
           );
-          last = matchIndex + (m[0]?.length ?? 0);
+          last = m.index + (m[0]?.length ?? 0);
+          if (trimmed[last] === ")") last += 1;
         }
         if (last < trimmed.length) parts.push(<span key={`${i}-last`}>{trimmed.slice(last)}</span>);
         return <p key={`p-${i}`} className="mb-4 last:mb-0">{parts}</p>;
@@ -95,11 +110,20 @@ export default function SPSection({
               </span>
               {mark === "ok" && <span className="text-sm font-bold text-emerald-600 dark:text-emerald-400">✓</span>}
               {mark === "bad" && <span className="text-sm font-bold text-rose-600 dark:text-rose-400">✗</span>}
-              {score !== null && (
+              {(score !== null || mark === "bad") && (
                 <span className="ui-text text-xs font-bold text-emerald-700 dark:text-emerald-300">
-                  Doğru: {item.solution.toUpperCase()}) {item.options[item.solution]}
+                  Doğru: {String(item.solution).toUpperCase()} {item.options?.[String(item.solution).toLowerCase()] ?? ""}
                 </span>
               )}
+              <button
+                type="button"
+                onClick={() => onCheckOne(id)}
+                aria-label={`${id} numaralı soruyu kontrol et`}
+                title="Bu soruyu kontrol et"
+                className="inline-flex h-7 w-7 items-center justify-center rounded-lg border border-slate-300 text-sm font-bold text-slate-600 hover:border-violet-400 hover:text-violet-600 dark:border-slate-600 dark:text-slate-300"
+              >
+                ✓
+              </button>
             </div>
             <select
               value={answers[id] ?? ""}
@@ -112,7 +136,7 @@ export default function SPSection({
             >
               <option value="">Seç…</option>
               {(["a", "b", "c", "d"] as const).map((k) => (
-                <option key={k} value={k}>{k}) {item.options[k]}</option>
+                <option key={k} value={k}>{k} {item.options[k]}</option>
               ))}
             </select>
           </div>

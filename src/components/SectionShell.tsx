@@ -50,6 +50,7 @@ export default function SectionShell({
         <div className="mt-7 flex flex-wrap items-center gap-3 border-t border-slate-200 pt-5 dark:border-slate-700/70">
           {onCheck && (
             <button
+              type="button"
               onClick={onCheck}
               className="ui-text inline-flex items-center gap-2 rounded-xl bg-violet-600 px-4 py-2.5 text-sm font-semibold text-white shadow-[0_10px_25px_rgba(139,122,247,0.28)] transition hover:bg-violet-500 active:scale-[0.98]"
             >
@@ -58,6 +59,7 @@ export default function SectionShell({
           )}
           {onReset && (
             <button
+              type="button"
               onClick={onReset}
               className="ui-text inline-flex items-center gap-2 rounded-xl border border-slate-300 bg-slate-100 px-4 py-2.5 text-sm font-semibold text-slate-700 transition hover:bg-slate-200 active:scale-[0.98] dark:border-slate-600 dark:bg-slate-800/80 dark:text-slate-200 dark:hover:bg-slate-700"
             >

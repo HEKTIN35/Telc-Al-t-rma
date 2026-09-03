@@ -16,6 +16,8 @@ export default function LV3Section({
   heading,
   headingMark,
   onAnswer,
+  onCheckOne,
+  onCheckHeading,
   onHeading,
   onCheckAll,
   onReset,
@@ -28,6 +30,8 @@ export default function LV3Section({
   heading: string | null;
   headingMark: "ok" | "bad" | null;
   onAnswer: (id: number, value: string) => void;
+  onCheckOne: (id: number) => void;
+  onCheckHeading: () => void;
   onHeading: (value: string) => void;
   onCheckAll: () => void;
   onReset: () => void;
@@ -103,11 +107,14 @@ export default function LV3Section({
                 })}
                 {mark === "ok" && <span className="text-lg font-bold text-emerald-600 dark:text-emerald-400">✓</span>}
                 {mark === "bad" && <span className="text-lg font-bold text-rose-600 dark:text-rose-400">✗</span>}
-                {score !== null && (
+                {mark === "bad" && st.solution && (
                   <span className="ui-text text-xs font-bold text-emerald-700 dark:text-emerald-300">
-                    Doğru: {st.solution}
+                    Doğru: {String(st.solution)}
                   </span>
                 )}
+                <button type="button" onClick={() => onCheckOne(st.id)} className="ui-text rounded-lg border border-slate-300 px-2 py-1 text-xs font-semibold text-slate-600 hover:border-violet-400 hover:text-violet-600 dark:border-slate-600 dark:text-slate-300">
+                  Kontrol Et
+                </button>
               </div>
             </div>
           );
@@ -127,9 +134,9 @@ export default function LV3Section({
             {data.heading.question}
             {headingMark === "ok" && <span className="ml-2 text-emerald-600 dark:text-emerald-400">✓</span>}
             {headingMark === "bad" && <span className="ml-2 text-rose-600 dark:text-rose-400">✗</span>}
-            {score !== null && (
+            {headingMark === "bad" && data.heading.solution && (
               <span className="ml-2 ui-text text-xs font-bold text-emerald-700 dark:text-emerald-300">
-                Doğru: {data.heading.solution.toUpperCase()}
+                Doğru: {String(data.heading.solution).toUpperCase()}
               </span>
             )}
           </p>
@@ -153,6 +160,9 @@ export default function LV3Section({
               </label>
             ))}
           </div>
+          <button type="button" onClick={onCheckHeading} className="ui-text mt-3 rounded-lg border border-slate-300 px-2 py-1 text-xs font-semibold text-slate-600 hover:border-violet-400 hover:text-violet-600 dark:border-slate-600 dark:text-slate-300">
+            Kontrol Et
+          </button>
         </div>
       )}
     </>

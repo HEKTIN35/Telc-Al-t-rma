@@ -13,9 +13,37 @@ type MarkMap = Record<string | number, "ok" | "bad">;
 const SECTION_IDS = ["lv1", "lv2", "lv3", "sp"] as const;
 type SectionId = (typeof SECTION_IDS)[number];
 
+const SESSION_STORAGE_KEY = "telc-trainer-session";
+
+type SavedSession = {
+  data: TrainerData;
+  fileName: string | null;
+  lv1Answers: Record<string, string>;
+  lv2Answers: Record<number, string>;
+  lv3Answers: Record<number, string>;
+  lv3Heading: string | null;
+  spAnswers: Record<string, string>;
+  scrollY: number;
+};
+
+function loadSavedSession(): Partial<SavedSession> {
+  if (typeof window === "undefined") return {};
+  const saved = localStorage.getItem(SESSION_STORAGE_KEY);
+  if (!saved) return {};
+
+  try {
+    const parsed = JSON.parse(saved) as Partial<SavedSession>;
+    return parsed && typeof parsed === "object" ? parsed : {};
+  } catch {
+    localStorage.removeItem(SESSION_STORAGE_KEY);
+    return {};
+  }
+}
+
 export default function App() {
-  const [data, setData] = useState<TrainerData>(sampleData);
-  const [fileName, setFileName] = useState<string | null>(null);
+  const [savedSession] = useState(loadSavedSession);
+  const [data, setData] = useState<TrainerData>(savedSession.data ?? sampleData);
+  const [fileName, setFileName] = useState<string | null>(savedSession.fileName ?? null);
   const [error, setError] = useState<string | null>(null);
 
   const [theme, setTheme] = useState<"light" | "dark">(() => {
@@ -29,24 +57,24 @@ export default function App() {
   const [splitView, setSplitView] = useState<boolean>(false);
 
   // LV1
-  const [lv1Answers, setLv1Answers] = useState<Record<string, string>>({});
+  const [lv1Answers, setLv1Answers] = useState<Record<string, string>>(savedSession.lv1Answers ?? {});
   const [lv1Marks, setLv1Marks] = useState<MarkMap>({});
   const [lv1Score, setLv1Score] = useState<Score>(null);
 
   // LV2
-  const [lv2Answers, setLv2Answers] = useState<Record<number, string>>({});
+  const [lv2Answers, setLv2Answers] = useState<Record<number, string>>(savedSession.lv2Answers ?? {});
   const [lv2Marks, setLv2Marks] = useState<MarkMap>({});
   const [lv2Score, setLv2Score] = useState<Score>(null);
 
   // LV3
-  const [lv3Answers, setLv3Answers] = useState<Record<number, string>>({});
+  const [lv3Answers, setLv3Answers] = useState<Record<number, string>>(savedSession.lv3Answers ?? {});
   const [lv3Marks, setLv3Marks] = useState<MarkMap>({});
-  const [lv3Heading, setLv3Heading] = useState<string | null>(null);
+  const [lv3Heading, setLv3Heading] = useState<string | null>(savedSession.lv3Heading ?? null);
   const [lv3HeadingMark, setLv3HeadingMark] = useState<"ok" | "bad" | null>(null);
   const [lv3Score, setLv3Score] = useState<Score>(null);
 
   // SP
-  const [spAnswers, setSpAnswers] = useState<Record<string, string>>({});
+  const [spAnswers, setSpAnswers] = useState<Record<string, string>>(savedSession.spAnswers ?? {});
   const [spMarks, setSpMarks] = useState<MarkMap>({});
   const [spScore, setSpScore] = useState<Score>(null);
 
@@ -60,6 +88,46 @@ export default function App() {
     document.body.classList.toggle("reading-mode", reading);
     localStorage.setItem("telc-reading", reading ? "1" : "0");
   }, [reading]);
+
+  useEffect(() => {
+    const saveSession = () => {
+      const previous = loadSavedSession();
+      localStorage.setItem(SESSION_STORAGE_KEY, JSON.stringify({
+        ...previous,
+        data,
+        fileName,
+        lv1Answers,
+        lv2Answers,
+        lv3Answers,
+        lv3Heading,
+        spAnswers,
+        scrollY: window.scrollY,
+      } satisfies SavedSession));
+    };
+
+    saveSession();
+  }, [data, fileName, lv1Answers, lv2Answers, lv3Answers, lv3Heading, spAnswers]);
+
+  useEffect(() => {
+    const savedScrollY = savedSession.scrollY;
+    if (typeof savedScrollY !== "number") return;
+    const restore = window.setTimeout(() => window.scrollTo({ top: savedScrollY, behavior: "auto" }), 0);
+    return () => window.clearTimeout(restore);
+  }, [savedSession.scrollY]);
+
+  useEffect(() => {
+    const saveScrollPosition = () => {
+      const current = loadSavedSession();
+      localStorage.setItem(SESSION_STORAGE_KEY, JSON.stringify({
+        ...current,
+        data: current.data ?? data,
+        fileName: current.fileName ?? fileName,
+        scrollY: window.scrollY,
+      }));
+    };
+    window.addEventListener("scroll", saveScrollPosition, { passive: true });
+    return () => window.removeEventListener("scroll", saveScrollPosition);
+  }, [data, fileName]);
 
   function resetAllAnswers() {
     setLv1Answers({});
@@ -125,21 +193,21 @@ export default function App() {
     const chosen = lv1Answers[blankId];
     setLv1Marks((prev) => {
       const next = { ...prev };
-      if (!chosen) delete next[blankId];
-      else next[blankId] = chosen === sol ? "ok" : "bad";
+      next[blankId] = String(chosen ?? "").trim().toLowerCase() === String(sol).trim().toLowerCase() ? "ok" : "bad";
       return next;
     });
   }
   function lv1CheckAll() {
     const lv1 = data.lv1;
-    if (!lv1?.solution) return;
-    const ids = Object.keys(lv1.solution);
+    if (!lv1) return;
+    const solution = lv1.solution ?? {};
+    const ids = Object.keys(solution);
     let correct = 0;
     const nextMarks: MarkMap = {};
     ids.forEach((id) => {
-      const chosen = lv1Answers[id];
-      if (!chosen) return;
-      if (chosen === lv1.solution[id]) {
+      const chosen = String(lv1Answers[id] ?? "").trim().toLowerCase();
+      const expected = String(solution[id] ?? "").trim().toLowerCase();
+      if (chosen && expected && chosen === expected) {
         nextMarks[id] = "ok";
         correct++;
       } else {
@@ -159,6 +227,12 @@ export default function App() {
       return next;
     });
   }
+  function lv2CheckOne(id: number) {
+    const question = data.lv2?.questions.find((q) => q.id === id);
+    if (!question) return;
+    const chosen = lv2Answers[id];
+    setLv2Marks((prev) => ({ ...prev, [id]: String(chosen ?? "").trim().toLowerCase() === String(question.solution).trim().toLowerCase() ? "ok" : "bad" }));
+  }
   function lv2CheckAll() {
     const lv2 = data.lv2;
     if (!lv2?.questions?.length) return;
@@ -167,8 +241,7 @@ export default function App() {
     lv2.questions.forEach((q) => {
       if (!q.solution) return;
       const chosen = lv2Answers[q.id];
-      if (!chosen) return;
-      if (chosen === q.solution) {
+      if (String(chosen ?? "").trim().toLowerCase() === String(q.solution).trim().toLowerCase()) {
         nextMarks[q.id] = "ok";
         correct++;
       } else {
@@ -188,18 +261,28 @@ export default function App() {
       return next;
     });
   }
+  function lv3CheckOne(id: number) {
+    const statement = data.lv3?.statements.find((st) => st.id === id);
+    if (!statement) return;
+    const chosen = lv3Answers[id];
+    setLv3Marks((prev) => ({ ...prev, [id]: String(chosen ?? "").trim().toLowerCase() === String(statement.solution).trim().toLowerCase() ? "ok" : "bad" }));
+  }
+  function lv3CheckHeading() {
+    const solution = data.lv3?.heading?.solution;
+    if (!solution) return;
+    setLv3HeadingMark(lv3Heading === solution ? "ok" : "bad");
+  }
   function lv3CheckAll() {
     const lv3 = data.lv3;
-    if (!lv3?.statements?.length) return;
+    if (!lv3) return;
     let correct = 0;
     let total = 0;
     const nextMarks: MarkMap = {};
-    lv3.statements.forEach((st) => {
+    (lv3.statements ?? []).forEach((st) => {
       if (!st.solution) return;
       total++;
       const chosen = lv3Answers[st.id];
-      if (!chosen) return;
-      if (chosen === st.solution) {
+      if (String(chosen ?? "").trim().toLowerCase() === String(st.solution).trim().toLowerCase()) {
         nextMarks[st.id] = "ok";
         correct++;
       } else {
@@ -209,10 +292,12 @@ export default function App() {
     setLv3Marks(nextMarks);
 
     let headingMark: "ok" | "bad" | null = null;
-    if (lv3.heading?.solution) {
+    if (lv3.heading) {
       total++;
-      if (lv3Heading) {
-        headingMark = lv3Heading === lv3.heading.solution ? "ok" : "bad";
+      const headingSolution = String(lv3.heading.solution ?? "").trim().toLowerCase();
+      const headingAnswer = String(lv3Heading ?? "").trim().toLowerCase();
+      if (headingAnswer) {
+        headingMark = headingAnswer === headingSolution ? "ok" : "bad";
         if (headingMark === "ok") correct++;
       }
     }
@@ -229,6 +314,12 @@ export default function App() {
       return next;
     });
   }
+  function spCheckOne(id: string) {
+    const item = data.sp?.items.find((entry) => String(entry.id) === id);
+    if (!item) return;
+    const chosen = spAnswers[id];
+    setSpMarks((prev) => ({ ...prev, [id]: chosen === item.solution ? "ok" : "bad" }));
+  }
   function spCheckAll() {
     const sp = data.sp;
     if (!sp?.items?.length) return;
@@ -239,11 +330,9 @@ export default function App() {
       const id = String(item.id);
       if (!item.solution) return;
       total++;
-      const chosenKey = spAnswers[id];
-      if (!chosenKey) return;
-      const chosenText = item.options?.[chosenKey];
-      const solText = item.options?.[item.solution];
-      if (chosenText && solText && chosenText === solText) {
+      const chosenKey = String(spAnswers[id] ?? "").trim().toLowerCase();
+      const normalizedSolution = String(item.solution).trim().toLowerCase();
+      if (chosenKey && chosenKey === normalizedSolution) {
         nextMarks[id] = "ok";
         correct++;
       } else {
@@ -307,6 +396,7 @@ export default function App() {
               answers={lv2Answers}
               marks={lv2Marks as Record<number, "ok" | "bad">}
               onAnswer={lv2Answer}
+              onCheckOne={lv2CheckOne}
               onCheckAll={lv2CheckAll}
               onReset={() => { setLv2Answers({}); setLv2Marks({}); setLv2Score(null); }}
               score={lv2Score}
@@ -324,6 +414,8 @@ export default function App() {
               heading={lv3Heading}
               headingMark={lv3HeadingMark}
               onAnswer={lv3Answer}
+              onCheckOne={lv3CheckOne}
+              onCheckHeading={lv3CheckHeading}
               onHeading={(v) => { setLv3Heading(v); setLv3HeadingMark(null); }}
               onCheckAll={lv3CheckAll}
               onReset={() => { setLv3Answers({}); setLv3Marks({}); setLv3Heading(null); setLv3HeadingMark(null); setLv3Score(null); }}
@@ -340,6 +432,7 @@ export default function App() {
               answers={spAnswers}
               marks={spMarks as Record<string, "ok" | "bad">}
               onAnswer={spAnswer}
+              onCheckOne={spCheckOne}
               onCheckAll={spCheckAll}
               onReset={() => { setSpAnswers({}); setSpMarks({}); setSpScore(null); }}
               score={spScore}
